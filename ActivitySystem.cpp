@@ -5,33 +5,33 @@
 ActivitySystem* ActivitySystem::AcSystemInstance = nullptr;
 
 
-AcNode_Discount::AcNode_Discount(int ID, string Cont, vector<int>& CommodityIDList, float DisRate) : AcNode(ID, Cont)
+AcNode_Discount::AcNode_Discount(int ID, string Cont, vector<int>& CommodityInformaitonReaderIDList, float DisRate) : AcNode(ID, Cont)
 {
-    SatisfyCommodityIDList = CommodityIDList;
+    SatisfyCommodityInformaitonReaderIDList = CommodityInformaitonReaderIDList;
     DiscountRate = DisRate;
 }
 
-float AcNode_Discount::ExecuteActivity(Commodity* BuyCommodity)
+float AcNode_Discount::ExecuteActivity(CommodityInformaitonReader* BuyCommodityInformaitonReader, int Amount)
 {
-    if (IsSatisfy(BuyCommodity))
-        return CalPrice(BuyCommodity);
+    if (IsSatisfy(BuyCommodityInformaitonReader))
+        return CalPrice(BuyCommodityInformaitonReader, Amount);
     else
-        return BuyCommodity->GetPrice();
+        return BuyCommodityInformaitonReader->getPrice() * Amount * 1.0f;
 }
 
-bool AcNode_Discount::IsSatisfy(Commodity* BuyCommodity)
+bool AcNode_Discount::IsSatisfy(CommodityInformaitonReader* BuyCommodityInformaitonReader)
 {
-    for (vector<int>::iterator iter = SatisfyCommodityIDList.begin(); iter != SatisfyCommodityIDList.end(); ++iter)
+    for (vector<int>::iterator iter = SatisfyCommodityInformaitonReaderIDList.begin(); iter != SatisfyCommodityInformaitonReaderIDList.end(); ++iter)
     {
-        if (BuyCommodity->GetID() == *iter)
+        if (BuyCommodityInformaitonReader->getID() == *iter)
             return true;
     }
     return false;
 }
 
-float AcNode_Discount::CalPrice(Commodity* BuyCommodity)
+float AcNode_Discount::CalPrice(CommodityInformaitonReader* BuyCommodityInformaitonReader, int Amount)
 {
-    return DiscountRate * BuyCommodity->GetPrice();
+    return DiscountRate * BuyCommodityInformaitonReader->getPrice() * Amount;
 }
 
 AcNode_FullReduction::AcNode_FullReduction(int ID, string Cont, float Thd, float RedAmount) : AcNode(ID, Cont)
@@ -40,31 +40,31 @@ AcNode_FullReduction::AcNode_FullReduction(int ID, string Cont, float Thd, float
     ReductionAmount = RedAmount;
 }
 
-float AcNode_FullReduction::ExecuteActivity(vector<Commodity*>& BuyCommodity)
+float AcNode_FullReduction::ExecuteActivity(map<CommodityInformaitonReader*, int>& BuyCommodityInformaitonReader)
 {
-    if (IsSatisfy(BuyCommodity))
-        return CalPrice(BuyCommodity);
-    return CalPrice(BuyCommodity) + ReductionAmount;
+    if (IsSatisfy(BuyCommodityInformaitonReader))
+        return CalPrice(BuyCommodityInformaitonReader);
+    return CalPrice(BuyCommodityInformaitonReader) + ReductionAmount;
 }
 
-bool AcNode_FullReduction::IsSatisfy(vector<Commodity*>& BuyCommodity)
+bool AcNode_FullReduction::IsSatisfy(map<CommodityInformaitonReader*, int>& BuyCommodityInformaitonReader)
 {
     float sumPrize = 0;
-    for (vector<Commodity*>::iterator iter = BuyCommodity.begin(); iter != BuyCommodity.end(); ++iter)
+    for (auto iter = BuyCommodityInformaitonReader.begin(); iter != BuyCommodityInformaitonReader.end(); ++iter)
     {
-        sumPrize += (*iter)->GetPrice();
+        sumPrize += (*iter).first->getPrice() * (*iter).second;
     }
     if (sumPrize >= Threshold)
         return true;
     return false;
 }
 
-float AcNode_FullReduction::CalPrice(vector<Commodity*>& BuyCommodity)
+float AcNode_FullReduction::CalPrice(map<CommodityInformaitonReader*, int>& BuyCommodityInformaitonReader)
 {
     float sumPrize = 0;
-    for (vector<Commodity*>::iterator iter = BuyCommodity.begin(); iter != BuyCommodity.end(); ++iter)
+    for (auto iter = BuyCommodityInformaitonReader.begin(); iter != BuyCommodityInformaitonReader.end(); ++iter)
     {
-        sumPrize += (*iter)->GetPrice();
+        sumPrize += (*iter).first->getPrice() * (*iter).second;
     }
     return sumPrize - ReductionAmount;
 }

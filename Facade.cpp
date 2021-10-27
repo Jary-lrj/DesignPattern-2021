@@ -105,9 +105,9 @@ void Facade::BrowseAc(int BrowseAcID)
     delete AcBrowse;
 }
 
-void Facade::AddAcD(int ID, string Cont, vector<int>& CommodityList, float DisRate)
+void Facade::AddAcD(int ID, string Cont, vector<int>& CommodityInformaitonReaderList, float DisRate)
 {
-    AcVisitor_Add* AddAcVisit = new AcVisitor_Add(ID, Cont, CommodityList, DisRate);
+    AcVisitor_Add* AddAcVisit = new AcVisitor_Add(ID, Cont, CommodityInformaitonReaderList, DisRate);
     AcSystemInstance->Accept(AddAcVisit);
     delete AddAcVisit;
 }
@@ -119,18 +119,18 @@ void Facade::AddAcF(int ID, string Cont, float Thd, float RedAmount)
     delete AddAcVisit;
 }
 
-float Facade::CalOptimalDecision(vector<Commodity*>& BuyCommodityList) // 策略模式
+float Facade::CalOptimalDecision(map<CommodityInformaitonReader*, int>& BuyCommodityInformaitonReaderMap) // 策略模式
 {
     AcVisitor_CalPrice* CalPriceVisitor;
 
-    CalPriceVisitor = new AcVisitor_CP_Discount(BuyCommodityList); // 策略1，使用打折活动
+    CalPriceVisitor = new AcVisitor_CP_Discount(BuyCommodityInformaitonReaderMap); // 策略1，使用打折活动
     AcSystemInstance->Accept(CalPriceVisitor);
     float OptimalPrice = CalPriceVisitor->OptimalPrice;
     string OptimalDecisionCode = CalPriceVisitor->OptimalDecisionCode;
 
     delete CalPriceVisitor;
 
-    CalPriceVisitor = new AcVisitor_CP_FullRedu(BuyCommodityList); // 策略2，使用满减活动
+    CalPriceVisitor = new AcVisitor_CP_FullRedu(BuyCommodityInformaitonReaderMap); // 策略2，使用满减活动
     AcSystemInstance->Accept(CalPriceVisitor);
     if (CalPriceVisitor->OptimalPrice < OptimalPrice)
     {
@@ -144,12 +144,22 @@ float Facade::CalOptimalDecision(vector<Commodity*>& BuyCommodityList) // 策略
     return OptimalPrice;
 }
 
-void Facade::RecommendActivity(vector<Commodity*>& RelatedCommodityList)
+void Facade::RecommendActivity(vector<CommodityInformaitonReader*>& RelatedCommodityInformaitonReaderList)
 {
-    AcVisitor_Recommend* RecommendVisitor = new AcVisitor_Recommend(RelatedCommodityList); // 寻找相关活动
+    AcVisitor_Recommend* RecommendVisitor = new AcVisitor_Recommend(RelatedCommodityInformaitonReaderList); // 寻找相关活动
 
     AcSystemInstance->Accept(RecommendVisitor);
     ActivityInterpreter->MakeInterpretation(RecommendVisitor->RecommendActivityCode); // 进行解释
 
     delete RecommendVisitor;
+}
+
+void Facade::RecommendActivity(map<CommodityInformaitonReader*, int>& RelatedCommodityInformaitonReaderMap)
+{
+    vector<CommodityInformaitonReader*> RelatedCommodityInformaitonReaderList;
+    for (auto it = RelatedCommodityInformaitonReaderMap.begin(); it != RelatedCommodityInformaitonReaderMap.end(); it++)
+    {
+        RelatedCommodityInformaitonReaderList.push_back((*it).first);
+    }
+    RecommendActivity(RelatedCommodityInformaitonReaderList);
 }

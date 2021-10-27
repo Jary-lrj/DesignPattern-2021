@@ -3,11 +3,11 @@
 #include "Commodity.h"
 #include <set>
 
-AcVisitor_Recommend::AcVisitor_Recommend(vector<Commodity*>& RelatedCommodityList)
+AcVisitor_Recommend::AcVisitor_Recommend(vector<CommodityInformaitonReader*>& RelatedCommodityInformaitonReaderList)
 {
-    for (auto BuyCommodity : RelatedCommodityList)
+    for (auto BuyCommodityInformaitonReader : RelatedCommodityInformaitonReaderList)
     {
-        SaveRelatedCommodityList.push_back(BuyCommodity);
+        SaveRelatedCommodityInformaitonReaderList.push_back(BuyCommodityInformaitonReader);
     }
 }
 
@@ -19,11 +19,11 @@ void AcVisitor_Recommend::Visit(ActivitySystem* AcSystem)
 
     set<int> RecommendAcSet;
 
-    for (auto RelatedCommodity : SaveRelatedCommodityList)
+    for (auto RelatedCommodityInformaitonReader : SaveRelatedCommodityInformaitonReaderList)
     {
         for (int i = 0; i < AcSystem->DiscountActivityList.size(); i++)
         {
-            if (AcSystem->DiscountActivityList[i]->IsSatisfy(RelatedCommodity))
+            if (AcSystem->DiscountActivityList[i]->IsSatisfy(RelatedCommodityInformaitonReader))
                 RecommendAcSet.insert(i);
         }
     }
@@ -36,15 +36,15 @@ void AcVisitor_Recommend::Visit(ActivitySystem* AcSystem)
     RecommendActivityCode = RecommendCode;
 }
 
-AcVisitor_CalPrice::AcVisitor_CalPrice(vector<Commodity*>& BuyCommodityList)
+AcVisitor_CalPrice::AcVisitor_CalPrice(map<CommodityInformaitonReader*, int>& BuyCommodityInformaitonReaderMap)
 {
-    for (auto BuyCommodity : BuyCommodityList)
+    for (auto BuyCommodityInformaitonReader : BuyCommodityInformaitonReaderMap)
     {
-        SaveBuyCommodityList.push_back(BuyCommodity);
+        SaveBuyCommodityInformaitonReaderMap.insert(BuyCommodityInformaitonReader);
     }
 }
 
-AcVisitor_CP_Discount::AcVisitor_CP_Discount(vector<Commodity*>& BuyCommodityList) : AcVisitor_CalPrice(BuyCommodityList)
+AcVisitor_CP_Discount::AcVisitor_CP_Discount(map<CommodityInformaitonReader*, int>& BuyCommodityInformaitonReaderMap) : AcVisitor_CalPrice(BuyCommodityInformaitonReaderMap)
 {
 }
 
@@ -56,14 +56,14 @@ void AcVisitor_CP_Discount::Visit(ActivitySystem* AcSystem)
 
     float TotalMinPrice = 0.0f;
 
-    for (auto BuyCommodity : SaveBuyCommodityList)
+    for (auto BuyCommodityInformaitonReader : SaveBuyCommodityInformaitonReaderMap)
     {
         DecisionCode.push_back(120); // 后续位均代表对应的活动的下标，120即为不使用活动
-        float MinPrice = BuyCommodity->GetPrice();
+        float MinPrice = (BuyCommodityInformaitonReader.first->getPrice()) * BuyCommodityInformaitonReader.second;
 
         for (int i = 0; i < AcSystem->DiscountActivityList.size(); i++)
         {
-            float CalPrice = AcSystem->DiscountActivityList[i]->ExecuteActivity(BuyCommodity);
+            float CalPrice = AcSystem->DiscountActivityList[i]->ExecuteActivity(BuyCommodityInformaitonReader.first, BuyCommodityInformaitonReader.second);
             if (CalPrice < MinPrice)
             {
                 MinPrice = CalPrice;
@@ -79,7 +79,7 @@ void AcVisitor_CP_Discount::Visit(ActivitySystem* AcSystem)
     OptimalDecisionCode = DecisionCode;
 }
 
-AcVisitor_CP_FullRedu::AcVisitor_CP_FullRedu(vector<Commodity*>& BuyCommodityList) : AcVisitor_CalPrice(BuyCommodityList)
+AcVisitor_CP_FullRedu::AcVisitor_CP_FullRedu(map<CommodityInformaitonReader*, int>& BuyCommodityInformaitonReaderMap) : AcVisitor_CalPrice(BuyCommodityInformaitonReaderMap)
 {
 }
 
@@ -91,15 +91,15 @@ void AcVisitor_CP_FullRedu::Visit(ActivitySystem* AcSystem)
 
     float TotalMinPrice = 0.0f;
 
-    for (auto BuyCommodity : SaveBuyCommodityList)
+    for (auto BuyCommodityInformaitonReader : SaveBuyCommodityInformaitonReaderMap)
     {
-        TotalMinPrice += BuyCommodity->GetPrice();
+        TotalMinPrice += (BuyCommodityInformaitonReader.first->getPrice()) * BuyCommodityInformaitonReader.second;
     }
 
     DecisionCode.push_back(120); // 后续位均代表对应的活动的下标，120即为不使用活动
     for (int i = 0; i < AcSystem->FullReductionActivityList.size(); i++)
     {
-        float CalPrice = AcSystem->FullReductionActivityList[i]->ExecuteActivity(SaveBuyCommodityList);
+        float CalPrice = AcSystem->FullReductionActivityList[i]->ExecuteActivity(SaveBuyCommodityInformaitonReaderMap);
         if (CalPrice < TotalMinPrice)
         {
             TotalMinPrice = CalPrice;
@@ -165,12 +165,12 @@ void AcVisitor_Browse::Visit(ActivitySystem* AcSystem)
     // 类似 Ad
 }
 
-AcVisitor_Add::AcVisitor_Add(int ID, string Cont, vector<int>& CommodityList, float DisRate)
+AcVisitor_Add::AcVisitor_Add(int ID, string Cont, vector<int>& CommodityInformaitonReaderList, float DisRate)
 {
     AcType = ActivityType::Discount;
     AcID = ID;
     Content = Cont;
-    SatisfyCommodityIDList = CommodityList;
+    SatisfyCommodityInformaitonReaderIDList = CommodityInformaitonReaderList;
     DiscountRate = DisRate;
 }
 
@@ -193,7 +193,7 @@ void AcVisitor_Add::Visit(ActivitySystem* AcSystem)
 
     if (AcType == ActivityType::Discount)
     {
-        AcNode_Discount* ac = new AcNode_Discount(AcID, Content, SatisfyCommodityIDList, DiscountRate);
+        AcNode_Discount* ac = new AcNode_Discount(AcID, Content, SatisfyCommodityInformaitonReaderIDList, DiscountRate);
         AcSystem->DiscountActivityList.push_back(ac);
     }
     else 
